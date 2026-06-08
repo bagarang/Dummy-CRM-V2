@@ -779,31 +779,41 @@
       e.preventDefault(); 
       let obj = Object.fromEntries(new FormData(e.target)); 
       obj.id = generateId('ACT');
+      
       obj.linkTersedia = (obj.linkFoto && obj.linkFoto.trim() !== '') ? 'Melampirkan' : 'Tidak Melampirkan';
-      if (obj.linkTersedia === 'Tidak Melampirkan') { obj.keterangan = (obj.keterangan || '') + ' [MINUS POIN KINERJA: Bukti Link Foto Tidak Dilampirkan]'; }
+      if (obj.linkTersedia === 'Tidak Melampirkan') { 
+          obj.keterangan = (obj.keterangan || '') + ' [MINUS POIN KINERJA: Bukti Link Foto Tidak Dilampirkan]'; 
+      }
       
       db.aktifitas.push(obj); 
       setDB('db_aktifitas', db.aktifitas);
 
-      let tIdx = db.toko.findIndex(t => t.kodeKontak === obj.kontakToko);
-      let jenisKunjunganToko = tIdx > -1 ? db.toko[tIdx].jenisKunjungan : obj.jenisKunjungan || '';
-
       let pIdx = db.plan.findIndex(p => p.id === obj.visitId);
       if(pIdx > -1) { 
+          // FIX: Pastikan status di-update berdasarkan input jenisKunjungan dari form
+          let jenis = obj.jenisKunjungan || ''; 
+          
           if(obj.status === 'Cancelled') { 
               db.plan[pIdx].status = 'Cancelled'; 
-          } else if (jenisKunjunganToko && (jenisKunjunganToko.includes('Call') || jenisKunjunganToko.includes('Remote') || jenisKunjunganToko.includes('WA'))) { 
-              // FIX Req 7: Status "Contacted" untuk jenis kunjungan Remote / Call
-              db.plan[pIdx].status = 'Contacted'; 
+          } else if (jenis.includes('Call') || jenis.includes('Remote') || jenis.includes('WA')) { 
+              db.plan[pIdx].status = 'Contacted'; // <--- Perbaikan di sini
           } else { 
               db.plan[pIdx].status = 'Visited'; 
           }
+          
           db.plan[pIdx].actualDate = obj.tanggalKunjungan; 
           db.plan[pIdx].daysUntilDue = 'Done'; 
           setDB('db_plan', db.plan); 
       }
-      if(tIdx > -1) { db.toko[tIdx].lastVisit = obj.tanggalKunjungan; setDB('db_toko', db.toko); }
-      closeModal(); renderPage('aktifitas');
+
+      let tIdx = db.toko.findIndex(t => t.kodeKontak === obj.kontakToko);
+      if(tIdx > -1) { 
+          db.toko[tIdx].lastVisit = obj.tanggalKunjungan; 
+          setDB('db_toko', db.toko); 
+      }
+      
+      closeModal(); 
+      renderPage('aktifitas');
     }
 
     // =========================================================================

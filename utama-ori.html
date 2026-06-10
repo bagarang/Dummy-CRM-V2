@@ -29,44 +29,18 @@
         --purple-grad: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
     }
     body { background-color: var(--bg-dark); color: var(--text-main); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; overflow-x: hidden; }
-    
-    /* CUSTOM SCROLLBAR UNTUK PC/MOUSE AGAR LEBIH JELAS */
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: var(--bg-dark); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; border: 2px solid var(--bg-dark); }
-    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
     .sidebar { background-color: var(--bg-panel); border-right: 1px solid var(--border); }
     .nav-btn { display: block; width: 100%; text-align: left; padding: 12px 20px; color: var(--text-muted); border-left: 3px solid transparent; cursor: pointer; transition: 0.2s; }
     .nav-btn:hover { background-color: rgba(255,255,255,0.05); }
     .nav-btn.active { background-color: var(--accent-glow); color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
     .card { background-color: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-    
-    /* KELAS BARU UNTUK SCROLLING TABEL */
-    .table-wrapper { overflow: auto; max-height: calc(100vh - 160px); }
-    
     .input-field { width: 100%; background-color: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 8px 12px; border-radius: 6px; margin-top: 4px; }
     .input-field:focus { outline: none; border-color: var(--accent); }
     .input-field:disabled, .input-field[readonly] { opacity: 0.6; cursor: not-allowed; }
-    
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    
-    /* STICKY HEADER AGAR JUDUL KOLOM TIDAK HILANG SAAT SCROLL BAWAH */
-    th { 
-        background-color: var(--bg-dark); 
-        color: var(--text-muted); 
-        padding: 12px; 
-        text-align: left; 
-        white-space: nowrap; 
-        position: sticky; 
-        top: 0; 
-        z-index: 10;
-        box-shadow: 0 1px 0 var(--border); /* Pengganti border-bottom agar rapi saat sticky */
-    }
-    
+    th { background-color: var(--bg-dark); color: var(--text-muted); padding: 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
     td { padding: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
     tr:hover td { background-color: rgba(255,255,255,0.03); }
-    
     .btn { padding: 8px 16px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; border: none;}
     .btn-primary { background: var(--purple-grad); color: #1e1b2e; font-weight: 700; }
     .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -111,6 +85,7 @@
     // =========================================================================
     const loggedInRole = sessionStorage.getItem('crm_logged_in_role');
     
+    // Jika tidak ada sesi login, tendang balik ke index.html
     if (!loggedInRole) {
         window.location.href = 'index.html';
     }
@@ -121,9 +96,6 @@
             window.location.href = 'index.html';
         }
     }
-
-    const myPIC = loggedInRole === 'RFS Ali' ? 'Ali' : (loggedInRole === 'AER Thia' ? 'Thia' : '');
-    const isManager = loggedInRole === 'Sales Manager';
 
     // =========================================================================
     // 1. DATA INITIALIZATION & GLOBALS
@@ -139,6 +111,7 @@
     }
     function setDB(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
 
+    // Memuat Database
     let db = { 
         setup: getDB('db_setup', typeof INIT_SETUP !== 'undefined' ? INIT_SETUP : {}), 
         toko: getDB('db_toko', typeof INIT_TOKO !== 'undefined' ? INIT_TOKO : []), 
@@ -147,10 +120,10 @@
         intel: getDB('db_intel', typeof INIT_INTEL !== 'undefined' ? INIT_INTEL : []) 
     };
 
-    window.dashFilters = { start: '', end: '', pic: isManager ? '' : myPIC, agen: '', toko: '' };
-    window.vpFilters = { pic: isManager ? '' : myPIC }; 
+    window.dashFilters = { start: '', end: '', pic: '', agen: '', toko: '' };
+    window.vpFilters = { pic: '' }; 
     window.actFilters = { jenis: '' }; 
-    window.currentUserRole = loggedInRole;
+    window.currentUserRole = loggedInRole; // Ambil dari session
     window.currentPage = 'dashboard';
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -162,6 +135,7 @@
       return match ? parseInt(match[0], 10) : 0;
     }
 
+    // Update Status Visit Plan Auto
     db.plan.forEach(p => {
         if(p.status !== 'Visited' && p.status !== 'Contacted' && p.status !== 'Cancelled' && p.status !== 'Recreated') { 
             p.status = (p.planDate < todayStr) ? 'Overdue' : 'Scheduled'; 
@@ -185,6 +159,7 @@
             document.getElementById('nav-setup').style.display = 'none';
             vpBtn.innerText = 'Contact Plan'; 
         } else {
+            // Role RFS Ali (Fungsi = Sales)
             document.getElementById('nav-setup').style.display = 'none';
             vpBtn.innerText = 'Visit Plan';
         }
@@ -218,7 +193,7 @@
     function delAktifitas(id) { if(confirm('Hapus Aktifitas ini?')) { db.aktifitas = db.aktifitas.filter(a => a.id !== id); setDB('db_aktifitas', db.aktifitas); renderPage('aktifitas'); } }
     function delIntel(id) { if(confirm('Hapus Report ini?')) { db.intel = db.intel.filter(i => i.id !== id); setDB('db_intel', db.intel); renderPage('intelejen'); } }
 
-    window.resetFilters = function() { window.dashFilters = { start: '', end: '', pic: isManager ? '' : myPIC, agen: '', toko: '' }; renderPage('dashboard'); }
+    window.resetFilters = function() { window.dashFilters = { start: '', end: '', pic: '', agen: '', toko: '' }; renderPage('dashboard'); }
     function autoAddSetup(key, val) { if(val && db.setup[key] && !db.setup[key].includes(val)) { db.setup[key].push(val); setDB('db_setup', db.setup); } }
 
     window.downloadReportLampiran = function() {
@@ -320,8 +295,7 @@
       let fStart = document.getElementById('dashStart') ? document.getElementById('dashStart').value : window.dashFilters.start;
       let fEnd = document.getElementById('dashEnd') ? document.getElementById('dashEnd').value : window.dashFilters.end;
       let fToko = document.getElementById('dashToko') ? document.getElementById('dashToko').value : window.dashFilters.toko;
-      
-      let fPIC = isManager ? (document.getElementById('dashPIC') ? document.getElementById('dashPIC').value : window.dashFilters.pic) : myPIC;
+      let fPIC = document.getElementById('dashPIC') ? document.getElementById('dashPIC').value : window.dashFilters.pic;
       let fAgen = document.getElementById('dashAgen') ? document.getElementById('dashAgen').value : window.dashFilters.agen;
       
       window.dashFilters = { start: fStart, end: fEnd, pic: fPIC, agen: fAgen, toko: fToko };
@@ -360,12 +334,10 @@
       let linkData = { 'Melampirkan': 0, 'Tidak Melampirkan': 0 };
       fAktifitasCombined.forEach(a => { if(a.linkTersedia === 'Melampirkan') linkData['Melampirkan']++; else linkData['Tidak Melampirkan']++; });
 
-      let optToko = db.toko.filter(t => isManager || t.pic === myPIC)
-                           .map(t => `<option value="${t.kodeKontak}" ${fToko === t.kodeKontak ? 'selected':''}>${t.namaToko}</option>`).join('');
+      let optToko = db.toko.map(t => `<option value="${t.kodeKontak}" ${fToko === t.kodeKontak ? 'selected':''}>${t.namaToko}</option>`).join('');
       let upcomingPlan = db.plan.filter(p => p.status === 'Scheduled' && p.planDate >= todayStr && (!fPIC || p.pic === fPIC) && (!fAgen || (tokoMap[p.kontakToko] && tokoMap[p.kontakToko].orderKe === fAgen))).sort((a,b) => new Date(a.planDate) - new Date(b.planDate));
+      
       let actionTableData = fAktifitasCombined.filter(a => (a.penjelasanKeluhan && a.penjelasanKeluhan.trim() !== '') || (a.nextAction && a.nextAction.trim() !== ''));
-
-      let picFilterHtml = isManager ? `<div><label class="text-xs text-[#a18cd1] font-bold mb-1 block">FILTER PIC</label><select id="dashPIC" class="input-field mt-0" onchange="renderDashboard(document.getElementById('app-content'))"><option value="">-- Semua PIC --</option>${optionsHtml(db.setup.PIC, fPIC)}</select></div>` : '';
 
       c.innerHTML = `
         <div class="flex justify-between items-center mb-6">
@@ -382,7 +354,7 @@
                <div><label class="text-xs text-[var(--accent)] font-bold mb-1 block">TANGGAL AKHIR</label><input type="date" id="dashEnd" value="${fEnd}" class="input-field mt-0" onchange="renderDashboard(document.getElementById('app-content'))"></div>
                <div><label class="text-xs text-[#a18cd1] font-bold mb-1 block">FILTER TOKO</label><select id="dashToko" class="input-field mt-0" onchange="renderDashboard(document.getElementById('app-content'))"><option value="">-- Semua Toko --</option>${optToko}</select></div>
                <div><label class="text-xs text-[#a18cd1] font-bold mb-1 block">FILTER AGENT</label><select id="dashAgen" class="input-field mt-0" onchange="renderDashboard(document.getElementById('app-content'))"><option value="">-- Semua Agent --</option>${optionsHtml(db.setup.ORDER_KE, fAgen)}</select></div>
-               ${picFilterHtml}
+               <div><label class="text-xs text-[#a18cd1] font-bold mb-1 block">FILTER PIC</label><select id="dashPIC" class="input-field mt-0" onchange="renderDashboard(document.getElementById('app-content'))"><option value="">-- Semua PIC --</option>${optionsHtml(db.setup.PIC, fPIC)}</select></div>
             </div>
         </div>
 
@@ -502,9 +474,9 @@
     // 5. DAFTAR TOKO
     // =========================================================================
     function renderDaftarToko(c) {
-      let filteredToko = isManager ? db.toko : db.toko.filter(t => t.pic === myPIC);
+      let isManager = window.currentUserRole === 'Sales Manager';
 
-      let rows = filteredToko.map(t => {
+      let rows = db.toko.map(t => {
         let statusColor = (t.status === 'Inactive' || t.status === 'Non Aktif (Nomer Tidak dapat dihubungi)') ? 'var(--danger)' : 
                           (t.status === 'Active') ? '#10b981' : 
                           (t.status === 'Prospect') ? '#f59e0b' : 'var(--accent)';
@@ -533,7 +505,7 @@
           <h1 class="text-3xl font-bold">Daftar Toko</h1>
           <div>${uploadBtn}<button onclick="formToko()" class="btn btn-primary">+ Add Toko Baru</button></div>
         </div>
-        <div class="card table-wrapper">
+        <div class="card overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -542,16 +514,14 @@
                 <th>PIC</th><th>TARGET KUNJUNGAN</th><th>LAST VISIT</th><th>KODE KONTAK</th><th>ACT</th>
               </tr>
             </thead>
-            <tbody>${rows.length > 0 ? rows : `<tr><td colspan="13" class="text-center text-[var(--text-muted)] py-4">Data toko kosong atau bukan hak akses anda.</td></tr>`}</tbody>
+            <tbody>${rows}</tbody>
           </table>
         </div>`;
     }
 
     function formToko(editId = null) {
+      let isManager = window.currentUserRole === 'Sales Manager';
       let t = editId ? db.toko.find(x => x.contactId === editId) : null;
-      let picSelectHtml = isManager ? 
-            `<select name="pic" class="input-field">${optionsHtml(db.setup.PIC, t?.pic)}</select>` : 
-            `<input name="pic" class="input-field text-gray-400" value="${myPIC}" readonly>`;
 
       openModal(`
         <h2 class="text-xl font-bold mb-4 text-[var(--accent)]">${t ? 'Edit Data Toko' : 'Form Tambah Daftar Toko'}</h2>
@@ -568,9 +538,7 @@
             </div>
             <div><label class="text-xs text-[#a18cd1] font-bold">STATUS TOKO</label><select name="status" class="input-field" required><option value="">Pilih Status...</option>${optionsHtml(db.setup.STATUS_TOKO, t?.status)}</select></div>
             <div><label class="text-xs text-[var(--text-muted)]">JENIS KUNJUNGAN</label><select name="jenisKunjungan" class="input-field">${optionsHtml(db.setup.JENIS_KUNJUNGAN, t?.jenisKunjungan)}</select></div>
-            <div><label class="text-xs text-[var(--text-muted)]">PIC</label>
-                 ${picSelectHtml}
-            </div>
+            <div><label class="text-xs text-[var(--text-muted)]">PIC</label><select name="pic" class="input-field">${optionsHtml(db.setup.PIC, t?.pic)}</select></div>
             <div><label class="text-xs font-bold text-[#fbc2eb]">TARGET KUNJUNGAN</label>
               <select name="targetKunjungan" class="input-field">${optionsHtml(db.setup.TARGET_KUNJUNGAN_OPTIONS || ['1 x Sebulan','2 x Sebulan'], t?.targetKunjungan)}</select>
             </div>
@@ -594,11 +562,12 @@
     // 6. VISIT PLAN
     // =========================================================================
     function renderVisitPlan(c) {
+      let isManager = window.currentUserRole === 'Sales Manager';
       let vpLabel = window.currentUserRole === 'AER Thia' ? 'Contact Plan' : 'Visit Plan';
-      
-      let fPIC = isManager ? window.vpFilters.pic : myPIC;
+      let fPIC = window.vpFilters.pic;
 
       let filteredPlans = db.plan.filter(p => {
+          // Menyembunyikan yang berstatus Visited, Contacted, atau Recreated
           if (p.status === 'Visited' || p.status === 'Contacted' || p.status === 'Recreated') return false;
           if (fPIC && p.pic !== fPIC) return false;
           return true;
@@ -610,6 +579,7 @@
         
         let actionBtn = isManager ? `<button onclick="delPlan('${p.id}')" class="text-xs text-[var(--text-muted)] hover:text-white font-bold ml-2">Del</button>` : '';
         if(p.status === 'Overdue') { 
+            // Menambahkan data-id agar sistem tahu mana plan lama yang mau direplace
             actionBtn = `<button data-id="${p.id}" data-toko="${p.kontakToko}" data-nama="${p.namaToko}" data-pic="${p.pic}" data-ket="${p.keterangan || ''}" onclick="recreatePlan(this)" class="btn btn-warning text-[10px] px-2 py-1 mr-2">⚠️ Recreate</button>` + actionBtn; 
         }
 
@@ -632,23 +602,19 @@
         </tr>`;
       }).join('');
       
-      let picFilterHtml = isManager ? `
-        <select id="vpPICFilter" class="input-field mt-0 w-40 text-sm" onchange="window.vpFilters.pic = this.value; renderVisitPlan(document.getElementById('app-content'))">
-            <option value="">-- Semua PIC --</option>
-            ${optionsHtml(db.setup.PIC, fPIC)}
-        </select>
-      ` : '';
-
       c.innerHTML = `
         <div class="flex justify-between items-center mb-6">
           <h1 class="text-3xl font-bold">${vpLabel}</h1>
           <div class="flex gap-2">
-            ${picFilterHtml}
+            <select id="vpPICFilter" class="input-field mt-0 w-40 text-sm" onchange="window.vpFilters.pic = this.value; renderVisitPlan(document.getElementById('app-content'))">
+                <option value="">-- Semua PIC --</option>
+                ${optionsHtml(db.setup.PIC, fPIC)}
+            </select>
             <button onclick="downloadVisitHistory()" class="btn btn-warning text-black shadow-md text-sm">📥 Download History</button>
             <button onclick="formPlan()" class="btn btn-primary text-sm">+ Create ${vpLabel}</button>
           </div>
         </div>
-        <div class="card table-wrapper">
+        <div class="card overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -663,9 +629,8 @@
     }
 
     window.downloadVisitHistory = function() {
-        let fPIC = isManager ? '' : myPIC;
-        let history = db.plan.filter(p => (p.status === 'Visited' || p.status === 'Contacted') && (!fPIC || p.pic === fPIC));
-        if (history.length === 0) { alert('Belum ada data history kunjungan/contacted untuk area Anda.'); return; }
+        let history = db.plan.filter(p => p.status === 'Visited' || p.status === 'Contacted');
+        if (history.length === 0) { alert('Belum ada data history kunjungan/contacted.'); return; }
         
         let csvContent = "data:text/csv;charset=utf-8,ID Plan,Kontak Toko,Nama Toko,Tujuan,PIC,Plan Date,Actual Date,Status,Keterangan\n";
         history.forEach(p => {
@@ -682,13 +647,12 @@
         link.click();
     }
 
+    // Fungsi tambahan untuk memfilter Toko Select via input ketikan
     window.filterTokoSelect = function(val) {
         let filter = val.toLowerCase();
         let select = document.getElementById('selectTokoPlan');
         let html = '<option value="">Pilih Toko Master...</option>';
-        
         db.toko.forEach(t => {
-            if (!isManager && t.pic !== myPIC) return; 
             let text = t.kodeKontak + ' - ' + t.namaToko;
             if(text.toLowerCase().includes(filter)) {
                 html += `<option value="${t.kodeKontak}" data-nama="${t.namaToko}">${text}</option>`;
@@ -697,16 +661,10 @@
         select.innerHTML = html;
     }
 
+    // Form dengan parameter oldPlanId (jika ini hasil Recreate)
     function formPlan(preToko = '', preNama = '', prePic = '', preKeterangan = '', oldPlanId = '') {
       let vpLabel = window.currentUserRole === 'AER Thia' ? 'Contact Plan' : 'Visit Plan';
-      
-      let filteredTokoForPlan = isManager ? db.toko : db.toko.filter(t => t.pic === myPIC);
-      let tokoOptions = filteredTokoForPlan.map(t => `<option value="${t.kodeKontak}" data-nama="${t.namaToko}" ${t.kodeKontak === preToko ? 'selected':''}>${t.kodeKontak} - ${t.namaToko}</option>`).join('');
-      
-      let picInputHtml = isManager ? 
-            `<select name="pic" class="input-field">${optionsHtml(db.setup.PIC, prePic)}</select>` : 
-            `<input name="pic" class="input-field text-gray-400" value="${myPIC}" readonly>`;
-
+      let tokoOptions = db.toko.map(t => `<option value="${t.kodeKontak}" data-nama="${t.namaToko}" ${t.kodeKontak === preToko ? 'selected':''}>${t.kodeKontak} - ${t.namaToko}</option>`).join('');
       openModal(`
         <h2 class="text-xl font-bold mb-4 text-[#a18cd1]">${preToko ? '⚠️ Recreate ' + vpLabel : 'Form Rencana Kunjungan'}</h2>
         <form onsubmit="savePlan(event)">
@@ -721,9 +679,7 @@
               <input type="hidden" name="namaToko" id="vpNama" value="${preNama}">
             </div>
             <div><label class="text-xs text-[var(--text-muted)]">TUJUAN KUNJUNGAN</label><select name="tujuanKunjungan" class="input-field">${optionsHtml(db.setup.AKTIFITAS)}</select></div>
-            <div><label class="text-xs text-[var(--text-muted)]">PIC JADWAL</label>
-                 ${picInputHtml}
-            </div>
+            <div><label class="text-xs text-[var(--text-muted)]">PIC JADWAL</label><select name="pic" class="input-field">${optionsHtml(db.setup.PIC, prePic)}</select></div>
             <div><label class="text-xs">NEW PLAN DATE *</label><input required type="date" name="planDate" class="input-field border-[var(--accent)]"></div>
             <div><label class="text-xs">PRIORITY</label><select name="priority" class="input-field"><option>High</option><option>Medium</option><option>Low</option></select></div>
             <div class="col-span-2"><label class="text-xs">KETERANGAN</label>
@@ -753,6 +709,7 @@
       obj.daysUntilDue = diff; 
       if (obj.planDate < todayStr) obj.status = 'Overdue'; 
 
+      // Logika mengubah plan lama menjadi Recreated sehingga hilang dari list
       if (oldPlanId) {
           let oldPlanIndex = db.plan.findIndex(p => p.id === oldPlanId);
           if (oldPlanIndex > -1) {
@@ -771,15 +728,12 @@
     // 7. AKTIFITAS (LOG)
     // =========================================================================
     function renderAktifitas(c) {
+      let isManager = window.currentUserRole === 'Sales Manager';
       let fJenis = window.actFilters.jenis;
 
+      // Filter berdasarkan Jenis Kunjungan
       let filteredAktifitas = db.aktifitas.filter(a => {
           if (fJenis && a.jenisKunjungan !== fJenis) return false;
-          
-          if (!isManager) {
-              let tData = db.toko.find(t => t.kodeKontak === a.kontakToko);
-              if (!tData || tData.pic !== myPIC) return false;
-          }
           return true;
       });
 
@@ -813,7 +767,7 @@
             <button onclick="formAktifitas()" class="btn btn-primary">+ Lapor Aktifitas Visit</button>
           </div>
         </div>
-        <div class="card table-wrapper">
+        <div class="card overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -829,9 +783,7 @@
     }
 
     function formAktifitas() {
-      let validPlans = db.plan.filter(p => (p.status === 'Scheduled' || p.status === 'Overdue') && (isManager || p.pic === myPIC));
-      let planOptions = validPlans.map(p => `<option value="${p.id}" data-kontak="${p.kontakToko}" data-nama="${p.namaToko}">${p.planDate} | ${p.namaToko} - ${p.tujuanKunjungan}</option>`).join('');
-      
+      let planOptions = db.plan.filter(p=>p.status === 'Scheduled' || p.status === 'Overdue').map(p => `<option value="${p.id}" data-kontak="${p.kontakToko}" data-nama="${p.namaToko}">${p.planDate} | ${p.namaToko} - ${p.tujuanKunjungan}</option>`).join('');
       openModal(`
         <h2 class="text-xl font-bold mb-4 text-[var(--accent)]">Laporan Hasil Visit</h2>
         <form onsubmit="saveAktifitas(event)">
@@ -916,15 +868,8 @@
     // 8. INTELEJEN REPORT
     // =========================================================================
     function renderIntelejen(c) {
-      let filteredIntel = db.intel.filter(i => {
-          if (!isManager) {
-              let tData = db.toko.find(t => t.kodeKontak === i.kontakToko);
-              if (!tData || tData.pic !== myPIC) return false;
-          }
-          return true;
-      });
-
-      let rows = filteredIntel.map(i => `<tr>
+      let isManager = window.currentUserRole === 'Sales Manager';
+      let rows = db.intel.map(i => `<tr>
         <td>${i.date}</td>
         <td class="text-xs">${i.kontakToko}</td>
         <td class="font-bold">${i.namaToko}</td>
@@ -938,7 +883,7 @@
           <h1 class="text-3xl font-bold">Intelejen Report</h1>
           <button onclick="formIntel()" class="btn btn-primary">+ Add Report Kompetitor</button>
         </div>
-        <div class="card table-wrapper">
+        <div class="card overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -946,15 +891,13 @@
                 <th>AKTIVITAS KOMPETITOR</th><th>KETERANGAN DETAIL</th><th>ACT</th>
               </tr>
             </thead>
-            <tbody>${rows.length > 0 ? rows : `<tr><td colspan="7" class="text-center text-[var(--text-muted)] py-4">Belum ada report intelejen.</td></tr>`}</tbody>
+            <tbody>${rows}</tbody>
           </table>
         </div>`;
     }
 
     function formIntel() {
-      let filteredTokoForIntel = isManager ? db.toko : db.toko.filter(t => t.pic === myPIC);
-      let tokoOptions = filteredTokoForIntel.map(t => `<option value="${t.kodeKontak}" data-nama="${t.namaToko}">${t.kodeKontak} - ${t.namaToko}</option>`).join('');
-      
+      let tokoOptions = db.toko.map(t => `<option value="${t.kodeKontak}" data-nama="${t.namaToko}">${t.kodeKontak} - ${t.namaToko}</option>`).join('');
       openModal(`
         <h2 class="text-xl font-bold mb-4 text-[#a18cd1]">Form Intelejen Kompetitor</h2>
         <form onsubmit="saveIntel(event)">
@@ -976,6 +919,7 @@
     }
     function saveIntel(e) { e.preventDefault(); let obj = Object.fromEntries(new FormData(e.target)); obj.id = generateId('INT'); db.intel.push(obj); setDB('db_intel', db.intel); closeModal(); renderPage('intelejen'); }
 
+    // Memuat saat pertama kali direfresh
     window.onload = () => { applyRoleRestrictions(loggedInRole); };
   </script>
 </body>

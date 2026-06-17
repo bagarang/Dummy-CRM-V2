@@ -87,9 +87,9 @@
     // =========================================================================
     // 1. DATA INITIALIZATION & GLOBALS
     // =========================================================================
-    if(localStorage.getItem('crm_version') !== 'FINAL_V17') {
+    if(localStorage.getItem('crm_version') !== 'FINAL_V16') {
       localStorage.clear();
-      localStorage.setItem('crm_version', 'FINAL_V17');
+      localStorage.setItem('crm_version', 'FINAL_V16');
     }
 
     function getDB(key, defaultData) { 
@@ -108,7 +108,7 @@
     };
 
     window.dashFilters = { start: '', end: '', pic: '', agen: '', toko: '' };
-    window.vpFilters = { pic: '' }; 
+    window.vpFilters = { pic: '' }; // Filter untuk Visit Plan
     window.currentUserRole = 'Sales Manager';
     window.currentPage = 'dashboard';
 
@@ -143,8 +143,9 @@
             vpBtn.innerText = 'Visit Plan';
         } else if (role === 'AER Thia') {
             document.getElementById('nav-setup').style.display = 'none';
-            vpBtn.innerText = 'Contact Plan'; 
+            vpBtn.innerText = 'Contact Plan'; // Nama menu berubah untuk Thia
         } else {
+            // Role RFS Ali (Fungsi = Sales)
             document.getElementById('nav-setup').style.display = 'none';
             vpBtn.innerText = 'Visit Plan';
         }
@@ -279,6 +280,7 @@
 
     // =========================================================================
     // 3. DASHBOARD
+    // Penambahan Tab "Keluhan dan Next Action"
     // =========================================================================
     function renderDashboard(c) {
       let fStart = document.getElementById('dashStart') ? document.getElementById('dashStart').value : window.dashFilters.start;
@@ -326,6 +328,7 @@
       let optToko = db.toko.map(t => `<option value="${t.kodeKontak}" ${fToko === t.kodeKontak ? 'selected':''}>${t.namaToko}</option>`).join('');
       let upcomingPlan = db.plan.filter(p => p.status === 'Scheduled' && p.planDate >= todayStr && (!fPIC || p.pic === fPIC) && (!fAgen || (tokoMap[p.kontakToko] && tokoMap[p.kontakToko].orderKe === fAgen))).sort((a,b) => new Date(a.planDate) - new Date(b.planDate));
       
+      // Filter Keluhan & Next Action
       let actionTableData = fAktifitasCombined.filter(a => (a.penjelasanKeluhan && a.penjelasanKeluhan.trim() !== '') || (a.nextAction && a.nextAction.trim() !== ''));
 
       c.innerHTML = `
@@ -550,6 +553,7 @@
 
     // =========================================================================
     // 6. VISIT PLAN
+    // Filter Hide Visited/Contacted & Download Button
     // =========================================================================
     function renderVisitPlan(c) {
       let isManager = window.currentUserRole === 'Sales Manager';
@@ -557,6 +561,7 @@
       let fPIC = window.vpFilters.pic;
 
       let filteredPlans = db.plan.filter(p => {
+          // Menyembunyikan yang berstatus Visited atau Contacted dari UI tabel
           if (p.status === 'Visited' || p.status === 'Contacted') return false;
           if (fPIC && p.pic !== fPIC) return false;
           return true;
@@ -568,6 +573,7 @@
         
         let actionBtn = isManager ? `<button onclick="delPlan('${p.id}')" class="text-xs text-[var(--text-muted)] hover:text-white font-bold ml-2">Del</button>` : '';
         if(p.status === 'Overdue') { 
+            // Recreate membawa keterangan
             actionBtn = `<button data-toko="${p.kontakToko}" data-nama="${p.namaToko}" data-pic="${p.pic}" data-ket="${p.keterangan || ''}" onclick="recreatePlan(this)" class="btn btn-warning text-[10px] px-2 py-1 mr-2">⚠️ Recreate</button>` + actionBtn; 
         }
 
@@ -616,6 +622,7 @@
         </div>`;
     }
 
+    // Download Data History (Plan yang sudah Visited/Contacted)
     window.downloadVisitHistory = function() {
         let history = db.plan.filter(p => p.status === 'Visited' || p.status === 'Contacted');
         if (history.length === 0) { alert('Belum ada data history kunjungan/contacted.'); return; }
@@ -635,6 +642,7 @@
         link.click();
     }
 
+    // Form dengan Keterangan ter-embed (Recreate)
     function formPlan(preToko = '', preNama = '', prePic = '', preKeterangan = '') {
       let vpLabel = window.currentUserRole === 'AER Thia' ? 'Contact Plan' : 'Visit Plan';
       let tokoOptions = db.toko.map(t => `<option value="${t.kodeKontak}" data-nama="${t.namaToko}" ${t.kodeKontak === preToko ? 'selected':''}>${t.kodeKontak} - ${t.namaToko}</option>`).join('');
@@ -680,32 +688,8 @@
     }
 
     // =========================================================================
-    // 7. AKTIFITAS (LOG)
+    // 7. AKTIFITAS (LOG) + Penambahan Keluhan & Next Action
     // =========================================================================
-    
-    // Helper function for auto-filling from Toko DB based on Plan Selection
-    window.updateAktifitasData = function(sel) {
-        if(!sel || sel.selectedIndex < 0) return;
-        let opt = sel.options[sel.selectedIndex];
-        
-        if (!opt.value) {
-            document.getElementById('actKontak').value = '';
-            document.getElementById('actNama').value = '';
-            document.getElementById('actOrderKe').value = '';
-            document.getElementById('actJenis').value = '';
-            return;
-        }
-
-        document.getElementById('actKontak').value = opt.dataset.kontak || '';
-        document.getElementById('actNama').value = opt.dataset.nama || '';
-        
-        let tData = db.toko.find(t => t.kodeKontak === opt.dataset.kontak);
-        if(tData) {
-            document.getElementById('actOrderKe').value = tData.orderKe || '';
-            document.getElementById('actJenis').value = tData.jenisKunjungan || '';
-        }
-    };
-
     function renderAktifitas(c) {
       let isManager = window.currentUserRole === 'Sales Manager';
       let rows = db.aktifitas.map(a => `<tr>
@@ -748,13 +732,14 @@
     }
 
     function formAktifitas() {
+      // FIX: Hanya jadwal yang status Scheduled atau Overdue
       let planOptions = db.plan.filter(p=>p.status === 'Scheduled' || p.status === 'Overdue').map(p => `<option value="${p.id}" data-kontak="${p.kontakToko}" data-nama="${p.namaToko}">${p.planDate} | ${p.namaToko} - ${p.tujuanKunjungan}</option>`).join('');
       openModal(`
         <h2 class="text-xl font-bold mb-4 text-[var(--accent)]">Laporan Hasil Visit</h2>
         <form onsubmit="saveAktifitas(event)">
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div class="col-span-2"><label class="text-xs">PILIH JADWAL PLAN *</label>
-              <select required id="actVisitId" name="visitId" class="input-field border-[var(--accent)]" onchange="updateAktifitasData(this)">
+              <select required name="visitId" class="input-field border-[var(--accent)]" onchange="let opt = this.options[this.selectedIndex]; document.getElementById('actKontak').value = opt.dataset.kontak; document.getElementById('actNama').value = opt.dataset.nama; let tData = db.toko.find(t=>t.kodeKontak===opt.dataset.kontak); if(tData){document.getElementById('actOrderKe').value=tData.orderKe||''; document.getElementById('actJenis').value=tData.jenisKunjungan||'';}">
                 <option value="">-- Pilih Jadwal Plan Terbuka --</option>${planOptions}
               </select>
               <input type="hidden" name="kontakToko" id="actKontak">
@@ -774,7 +759,7 @@
             <div><label class="text-xs text-[var(--text-muted)]">KELUHAN & FEEDBACK</label><select name="keluhanFeedback" class="input-field">${optionsHtml(db.setup.KELUHAN_FEEDBACK)}</select></div>
             <div><label class="text-xs">LINK FOTO KUNJUNGAN (Wajib / Poin -)</label><input name="linkFoto" class="input-field" placeholder="https://..."></div>
             <div class="col-span-2"><label class="text-xs">KETERANGAN LOG</label><input name="keterangan" class="input-field"></div>
-            
+            <!-- FIX Tambahan Req: Keluhan Detail dan Next Action -->
             <div class="col-span-2 border-t border-[var(--border)] pt-2 mt-2">
                 <label class="text-xs font-bold text-yellow-500">PENJELASAN KELUHAN DETAIL</label>
                 <textarea name="penjelasanKeluhan" class="input-field" placeholder="Tuliskan keluhan lengkap dari customer (jika ada)..." rows="2"></textarea>
@@ -805,12 +790,13 @@
 
       let pIdx = db.plan.findIndex(p => p.id === obj.visitId);
       if(pIdx > -1) { 
+          // FIX: Pastikan status di-update berdasarkan input jenisKunjungan dari form
           let jenis = obj.jenisKunjungan || ''; 
           
           if(obj.status === 'Cancelled') { 
               db.plan[pIdx].status = 'Cancelled'; 
           } else if (jenis.includes('Call') || jenis.includes('Remote') || jenis.includes('WA')) { 
-              db.plan[pIdx].status = 'Contacted'; 
+              db.plan[pIdx].status = 'Contacted'; // <--- Perbaikan di sini
           } else { 
               db.plan[pIdx].status = 'Visited'; 
           }
